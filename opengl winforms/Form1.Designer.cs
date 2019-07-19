@@ -33,6 +33,8 @@
             // 
             // glControl1
             // 
+            this.glControl1.Animation = true;
+            this.glControl1.AnimationTimer = false;
             this.glControl1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(64)))), ((int)(((byte)(64)))));
             this.glControl1.ColorBits = ((uint)(24u));
             this.glControl1.DepthBits = ((uint)(0u));
