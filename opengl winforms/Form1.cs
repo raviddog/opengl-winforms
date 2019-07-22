@@ -21,7 +21,7 @@ namespace opengl_winforms
         private GLVertexArrayObject vao;
 
         //
-        private static float angle; //its static so it starts at 0.00f. we'll use this to rotate our triangle
+        private static float angleZ, angleY, angleX; //its static so it starts at 0.00f. we'll use this to rotate our triangle
 
         public Form1()
         {
@@ -38,6 +38,12 @@ namespace opengl_winforms
         {
             //code executed when render context is created
 
+            //get a reference to the object that contains our opengl crap
+            Control senderControl = (Control)sender;
+            //set the size of our OpenGL rendering area. we're startign in the very corner and
+            //getting the height and the width of the blank canvas control in our form
+            Gl.Viewport(0, 0, senderControl.Size.Width, senderControl.Size.Height);
+            Gl.Enable(EnableCap.DepthTest);
             //create the shader, this compiles it and all that good stuff
             shaderProgram = new ShaderProgram(_VertexShader, _FragmentShader);
             vao = new GLVertexArrayObject(shaderProgram, _PositionData, _ColorData);
@@ -52,27 +58,26 @@ namespace opengl_winforms
 
         private void Render_ContextUpdate(object sender, GlControlEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine("update angle");
-            //code executed as the logic for each update i think?
-            angle += 1.0f;
-            if(angle > 360.0f)
-            {
-                //angle goes from 0.0f to 360.0f
-                angle -= 360.0f;
-            }
+            angleZ = (float)uiRotationBarZ.Value;
+            angleY = (float)uiRotationBarY.Value;
+            angleX = (float)uiRotationBarX.Value;
+            //System.Diagnostics.Debug.WriteLine("update angle");
+            ////code executed as the logic for each update i think?
+            //angle += 1.0f;
+            //if(angle > 360.0f)
+            //{
+            //    //angle goes from 0.0f to 360.0f
+            //    angle -= 360.0f;
+            //}
         }
 
         private void Render_Render(object sender, GlControlEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine("render");
+            //System.Diagnostics.Debug.WriteLine("render");
             //code executed to render the update iguess
             //not sure how this is different to onupdate
 
-            //get a reference to the object that contains our opengl crap
-            Control senderControl = (Control)sender;
-            //set the size of our OpenGL rendering area. we're startign in the very corner and
-            //getting the height and the width of the blank canvas control in our form
-            Gl.Viewport(0, 0, senderControl.Size.Width, senderControl.Size.Height);
+            
             //fill the viewport with a color
             //basically wipe it clean for a new rendering frame
             Gl.Clear(ClearBufferMask.ColorBufferBit);
@@ -94,7 +99,7 @@ namespace opengl_winforms
             //so we'll take our triangle model and move it 
             //to apply multiple matrices to something, you just multiple them together
             //so we're multiplying that by a matrix that rotates the model on the Z axis
-            Matrix4x4f model = Matrix4x4f.Translated(-0.5f, -0.5f, 0.0f) * Matrix4x4f.RotatedZ(angle);
+            Matrix4x4f model = Matrix4x4f.RotatedZ(angleZ) * Matrix4x4f.RotatedY(angleY) * Matrix4x4f.RotatedX(angleX) * Matrix4x4f.Translated(-0.5f, -0.5f, 0.0f);
 
             //tell OpenGL to use this shader
             Gl.UseProgram(shaderProgram.ProgramID);
@@ -105,14 +110,14 @@ namespace opengl_winforms
             //the matrix we're sending is our projection matrix multiplied by our model matrix
             //the model matrix puts the triangle in the right spot in our 3D world, the projection matrix
             //  makes it draw to the camera properly
-            Gl.UniformMatrix4f(shaderProgram.attribUniformLoc, 1, false, projection * model);
+            Gl.UniformMatrix4f(shaderProgram.attribUniformLoc, 1, false, model * projection);
             //tell OpenGL to use the state data saved in this Vertex Array Object
             Gl.BindVertexArray(vao.VAO_ID);
             //draw the vertexes
             //it takes the data from the activated buffers and processes it according to how we've told it to interpret it
             //we want to draw triangles, so it will connect every set of 3 vertex data points
             //we're starting from position 0 in the buffers, and processing 3 vertexes
-            Gl.DrawArrays(PrimitiveType.Triangles, 0, 3);
+            Gl.DrawArrays(PrimitiveType.Triangles, 0, 12);
             //unbind the vao. its good practice to do this, so you dont accidentally change your vao's state
             Gl.BindVertexArray(0);
             
@@ -191,14 +196,14 @@ namespace opengl_winforms
 
                     //this buffer contains the data that should be passed to the variable in the shader
                     //  that is at the location specified by attribPositionLoc, aka the "aPosition" variable
-                    //there are 2 pieces of data that this variable uses per vertex
+                    //there are 3 pieces of data that this variable uses per vertex
                     //the data is of type float
                     //the data describes a position in the virtual 3D space, as opposed to the 2D space on your screen
                     //  (aka OpenGL has to calculate where the 3D point will end up on the 2D screen.
                     //      its the whole 3D depth calculation thingy idk how to explain)
                     //the size of the gap between data for one vertex and data for the next vertex is 0
                     //start processing the data 0 bytes past the location specified
-                    Gl.VertexAttribPointer((uint)shader.attribPositionLoc, 2, VertexAttribType.Float, false, 0, IntPtr.Zero);
+                    Gl.VertexAttribPointer((uint)shader.attribPositionLoc, 3, VertexAttribType.Float, false, 0, IntPtr.Zero);
 
                     //turn on this attribute
                     Gl.EnableVertexAttribArray((uint)shader.attribPositionLoc);
@@ -323,15 +328,39 @@ namespace opengl_winforms
         /// Vertex position array.
         /// </summary>
         private static readonly float[] _PositionData = new float[] {
-            0.0f, 0.0f,
-            1.0f, 0.0f,
-            1.0f, 1.0f
+            0.0f, 0.0f, 0.0f,
+            1.0f, 0.0f, 0.0f,
+            1.0f, 1.0f, 0.0f,
+
+            0.0f, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f,
+            1.0f, 1.0f, 0.0f,
+
+            0.0f, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f,
+            0.0f, 1.0f, 1.0f,
+            0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 1.0f,
+            0.0f, 1.0f, 1.0f
+
         };
 
         /// <summary>
         /// Vertex color array.
         /// </summary>
         private static readonly float[] _ColorData = new float[] {
+            1.0f, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f,
+            0.0f, 0.0f, 1.0f,
+
+            1.0f, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f,
+            0.0f, 0.0f, 1.0f,
+
+            1.0f, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f,
+            0.0f, 0.0f, 1.0f,
+
             1.0f, 0.0f, 0.0f,
             0.0f, 1.0f, 0.0f,
             0.0f, 0.0f, 1.0f
@@ -342,11 +371,11 @@ namespace opengl_winforms
         private readonly string[] _VertexShader = {
             "#version 150 compatibility\n",
             "uniform mat4 uMVP;\n",
-            "in vec2 aPosition;\n",
+            "in vec3 aPosition;\n",
             "in vec3 aColor;\n",
             "out vec3 vColor;\n",
             "void main() {\n",
-            "	gl_Position = uMVP * vec4(aPosition, 0.0, 1.0);\n",
+            "	gl_Position = uMVP * vec4(aPosition, 1.0);\n",
             "	vColor = aColor;\n",
             "}\n"
         };
